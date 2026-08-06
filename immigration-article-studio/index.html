@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Immigration Article Studio</title>
+    <script>
+      if (window.location.protocol === "file:") {
+        window.location.replace("http://127.0.0.1:4173/");
+      }
+    </script>
+    <link rel="stylesheet" href="./styles.css?v=beta2" />
+  </head>
+  <body>
+    <div class="login-overlay hidden" id="loginOverlay">
+      <form class="login-card" id="loginForm">
+        <div class="brand-mark">IA</div>
+        <h2>内部内测访问</h2>
+        <p>请输入内测访问密码。生成内容、项目库和知识库只对已登录成员开放。</p>
+        <label>
+          使用者姓名
+          <input id="loginUserName" autocomplete="name" placeholder="例如：陈亮" />
+        </label>
+        <label>
+          访问密码
+          <input id="loginPassword" type="password" autocomplete="current-password" />
+        </label>
+        <button class="primary-button full-width" type="submit">进入内测版</button>
+        <p class="login-error" id="loginError"></p>
+      </form>
+    </div>
+
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Workspace navigation">
+        <div class="brand">
+          <div class="brand-mark">IA</div>
+          <div>
+            <h1>Article Studio</h1>
+            <p>Immigration content workflow</p>
+          </div>
+        </div>
+
+        <nav class="nav-list" aria-label="Primary">
+          <button class="nav-item active" data-section="workspace" type="button">
+            <span class="nav-icon" aria-hidden="true">01</span>
+            <span>工作台</span>
+          </button>
+          <button class="nav-item" data-section="finalImport" type="button">
+            <span class="nav-icon" aria-hidden="true">02</span>
+            <span>律师定稿</span>
+          </button>
+          <button class="nav-item" data-section="strategy" type="button">
+            <span class="nav-icon" aria-hidden="true">03</span>
+            <span>文章策略</span>
+          </button>
+          <button class="nav-item" data-section="draft" type="button">
+            <span class="nav-icon" aria-hidden="true">04</span>
+            <span>草稿编辑</span>
+          </button>
+          <button class="nav-item" data-section="review" type="button">
+            <span class="nav-icon" aria-hidden="true">05</span>
+            <span>律师审阅</span>
+          </button>
+          <button class="nav-item" data-section="social" type="button">
+            <span class="nav-icon" aria-hidden="true">06</span>
+            <span>多平台版本</span>
+          </button>
+          <button class="nav-item" data-section="library" type="button">
+            <span class="nav-icon" aria-hidden="true">07</span>
+            <span>项目库</span>
+          </button>
+        </nav>
+
+        <div class="role-card">
+          <label for="roleSelect">当前角色</label>
+          <select id="roleSelect">
+            <option value="assistant">法律助理</option>
+            <option value="attorney">律师</option>
+            <option value="admin">管理员</option>
+          </select>
+          <p id="roleNote">可创建草稿、调整风格、提交律师审阅。</p>
+          <p id="userNote">当前使用者：本机用户</p>
+          <button class="mini-button" id="logoutBtn" type="button">退出登录</button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Law firm AI writing platform</p>
+            <h2>移民公众号文章生成工作台</h2>
+          </div>
+          <div class="topbar-actions">
+            <button class="secondary-button" id="saveProjectBtn" type="button">保存版本</button>
+            <button class="ghost-button" id="resetBtn" type="button">重置</button>
+            <button class="primary-button" id="exportBtn" type="button">导出稿件</button>
+          </div>
+        </header>
+
+        <section class="section active" id="workspace">
+          <div class="section-grid">
+            <form class="panel form-panel" id="articleForm">
+              <div class="panel-heading">
+                <h3>创建文章任务</h3>
+                <p>把律师的写作判断拆成可选择的参数。</p>
+              </div>
+
+              <div class="field-row">
+                <label>
+                  文章主题
+                  <input id="topic" name="topic" value="" placeholder="例如：H-1B没有第二轮？没中签的人该看下一步了" />
+                </label>
+                <label>
+                  移民类别
+                  <select id="category" name="category">
+                    <option>EB-5</option>
+                    <option>NIW</option>
+                    <option>EB-1A</option>
+                    <option>EB-1C</option>
+                    <option selected>H-1B</option>
+                    <option>TN</option>
+                    <option>L-1</option>
+                    <option>O-1</option>
+                    <option>PERM</option>
+                    <option>家庭移民</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="field-row">
+                <label>
+                  目标读者
+                  <select id="audience" name="audience">
+                    <option selected>留学生与专业人士</option>
+                    <option>H-1B抽签未中者</option>
+                    <option>OPT/STEM OPT在美留学生</option>
+                    <option>雇主 HR 与招聘负责人</option>
+                    <option>加拿大和墨西哥 TN 申请人</option>
+                    <option>加拿大华人专业人士</option>
+                    <option>加拿大华人企业主</option>
+                    <option>墨西哥专业人士</option>
+                    <option>北美跨境雇主与 HR</option>
+                    <option>已持 TN 身份的在美专业人士</option>
+                    <option>中国高净值投资人</option>
+                    <option>企业主与创业者</option>
+                    <option>跨国公司 HR</option>
+                    <option>普通移民申请人</option>
+                  </select>
+                </label>
+                <label>
+                  发布渠道
+                  <select id="channel" name="channel">
+                    <option>微信公众号</option>
+                    <option>律所官网</option>
+                    <option>客户简报</option>
+                    <option>LinkedIn</option>
+                    <option>法律白皮书</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="field-row">
+                <label>
+                  写作风格
+                  <select id="styleProfile" name="styleProfile">
+                    <option>温勇NIW严审时代系列风格</option>
+                    <option>温勇公众号深度评论风格</option>
+                    <option>律所专业科普风格</option>
+                    <option>客户简报风格</option>
+                    <option>法律白皮书风格</option>
+                  </select>
+                </label>
+                <label>
+                  文章类型
+                  <select id="articleType" name="articleType">
+                    <option>政策风险深度拆解</option>
+                    <option>路径对比与行动建议</option>
+                    <option>新规解读与客户提醒</option>
+                    <option>案例情境拆解</option>
+                    <option>定稿多平台改写</option>
+                    <option>短评快讯</option>
+                  </select>
+                </label>
+              </div>
+
+              <fieldset class="segmented-field">
+                <legend>文章深度</legend>
+                <label><input type="radio" name="depth" value="quick" /> 快评</label>
+                <label><input type="radio" name="depth" value="standard" checked /> 标准深度</label>
+                <label><input type="radio" name="depth" value="deep" /> 深度拆解</label>
+              </fieldset>
+
+              <div class="slider-row">
+                <label for="legalRigor">法律严谨度</label>
+                <input id="legalRigor" type="range" min="1" max="5" value="4" />
+                <output id="legalRigorOut">4</output>
+              </div>
+              <div class="slider-row">
+                <label for="newsTone">新闻评论感</label>
+                <input id="newsTone" type="range" min="1" max="5" value="4" />
+                <output id="newsToneOut">4</output>
+              </div>
+
+              <div class="toggle-grid">
+                <label><input id="antiAi" type="checkbox" checked /> 去 AI 味</label>
+                <label><input id="riskFirst" type="checkbox" checked /> 强化风险提示</label>
+                <label><input id="wechatHook" type="checkbox" checked /> 公众号开篇钩子</label>
+                <label><input id="historicalTone" type="checkbox" /> 历史纵深感</label>
+                <label><input id="sanguoTone" type="checkbox" /> 三国风小标题</label>
+                <label><input id="poemClose" type="checkbox" /> 诗词结尾</label>
+              </div>
+
+              <label class="wide-label">
+                素材与律师笔记
+                <textarea id="materials" placeholder="粘贴新闻点、律师反馈、文章方向或客户常见问题。不要保留无关类别素材，否则生成会被素材带偏。"></textarea>
+              </label>
+
+              <div class="button-row">
+                <button class="primary-button" id="generateStrategyBtn" type="button">生成文章策略</button>
+                <button class="secondary-button" id="generateDraftBtn" type="button">生成初稿</button>
+              </div>
+            </form>
+
+            <aside class="panel status-panel">
+              <div class="panel-heading">
+                <h3>项目状态</h3>
+                <p>每一步都保留版本，便于律师回看。</p>
+              </div>
+              <ol class="workflow-list" id="workflowList">
+                <li class="done">任务参数已设定</li>
+                <li>文章策略待生成</li>
+                <li>初稿待生成</li>
+                <li>风格与论证待优化</li>
+                <li>律师终审待完成</li>
+              </ol>
+              <div class="metric-grid">
+                <div>
+                  <span class="metric-label">预计字数</span>
+                  <strong id="wordTarget">2200</strong>
+                </div>
+                <div>
+                  <span class="metric-label">风险等级</span>
+                  <strong id="riskLevel">中</strong>
+                </div>
+              </div>
+              <div class="note-box">
+                <strong>平台原则</strong>
+                <p>AI 负责草稿和结构化审查，律师负责事实判断、法律结论和最终发布。</p>
+              </div>
+              <div class="note-box api-box">
+                <strong>AI 后端状态</strong>
+                <p id="apiStatus">正在检查本地后端...</p>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="section" id="finalImport">
+          <div class="two-column final-import-layout">
+            <article class="panel">
+              <div class="panel-heading">
+                <h3>律师定稿导入</h3>
+                <p>温律师改好的文章可直接进入小红书、LinkedIn 和知识库沉淀流程。</p>
+              </div>
+
+              <div class="field-row">
+                <label>
+                  定稿标题
+                  <input id="finalTitle" placeholder="可留空，系统会从文章第一行识别" />
+                </label>
+                <label>
+                  移民类别
+                  <select id="finalCategory">
+                    <option>EB-5</option>
+                    <option selected>NIW</option>
+                    <option>EB-1A</option>
+                    <option>EB-1C</option>
+                    <option>H-1B</option>
+                    <option>TN</option>
+                    <option>L-1</option>
+                    <option>O-1</option>
+                    <option>PERM</option>
+                    <option>家庭移民</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="field-row">
+                <label>
+                  目标读者
+                  <select id="finalAudience">
+                    <option selected>留学生与专业人士</option>
+                    <option>H-1B抽签未中者</option>
+                    <option>OPT/STEM OPT在美留学生</option>
+                    <option>雇主 HR 与招聘负责人</option>
+                    <option>中国高净值投资人</option>
+                    <option>企业主与创业者</option>
+                    <option>跨国公司 HR</option>
+                    <option>普通移民申请人</option>
+                  </select>
+                </label>
+                <label>
+                  风格归类
+                  <select id="finalStyleProfile">
+                    <option selected>温勇NIW严审时代系列风格</option>
+                    <option>温勇公众号深度评论风格</option>
+                    <option>律所专业科普风格</option>
+                    <option>客户简报风格</option>
+                    <option>法律白皮书风格</option>
+                  </select>
+                </label>
+              </div>
+
+              <label class="wide-label">
+                粘贴律师定稿
+                <textarea id="finalArticle" class="final-article-input" placeholder="粘贴温律师已经修改确认的完整文章。这里不会自动重写原文，只用于生成多平台版本和沉淀写作规则。"></textarea>
+              </label>
+
+              <div class="button-row">
+                <button class="secondary-button" id="finalLoadBtn" type="button">载入为律师定稿</button>
+                <button class="primary-button" id="finalSocialBtn" type="button">生成小红书 / LinkedIn</button>
+                <button class="secondary-button" id="finalSaveBtn" type="button">保存为项目版本</button>
+                <button class="secondary-button" id="finalKnowledgeBtn" type="button">提炼为知识库规则</button>
+              </div>
+            </article>
+
+            <aside class="panel">
+              <div class="panel-heading">
+                <h3>定稿沉淀结果</h3>
+                <p>用于记录这篇文章可复用的标题、结构、论证和卡片风格。</p>
+              </div>
+              <div class="final-import-output" id="finalKnowledgeOutput">
+                <p class="empty-state">点击“提炼为知识库规则”后，这里会显示已保存的风格规则摘要。</p>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="section" id="strategy">
+          <div class="two-column">
+            <article class="panel">
+              <div class="panel-heading">
+                <h3>文章策略板</h3>
+                <p>先定判断，再写文字。确认方向后，点击下方按钮进入初稿。</p>
+              </div>
+              <div class="strategy-output" id="strategyOutput">
+                <p class="empty-state">点击“生成文章策略”后，这里会显示核心论点、结构、风险提示和补强方向。</p>
+              </div>
+              <div class="next-step-box" id="strategyNextStep">
+                <strong>下一步</strong>
+                <p>文章策略不会自动填入草稿编辑器。确认策略方向后，请点击“用此策略生成初稿”。</p>
+                <button class="primary-button" id="strategyDraftBtn" type="button">用此策略生成初稿</button>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-heading">
+                <h3>标题与开篇方向</h3>
+                <p>选择一个标题，或输入自定义标题；草稿会自动带入。</p>
+              </div>
+              <div class="title-list" id="titleOutput">
+                <p class="empty-state">标题建议会随策略一并生成。</p>
+              </div>
+              <label class="wide-label title-custom-field">
+                自定义标题
+                <input id="customTitle" placeholder="可直接输入最终标题" />
+              </label>
+              <div class="selected-title-box">
+                <strong>当前选中标题</strong>
+                <p id="selectedTitleText">尚未选择标题。</p>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="draft">
+          <div class="editor-layout">
+            <article class="panel editor-panel">
+              <div class="panel-heading">
+                <h3>草稿编辑器</h3>
+                <p>可直接编辑，也可用右侧按钮做定向改稿。</p>
+              </div>
+              <textarea id="draftEditor" class="draft-editor" spellcheck="false"></textarea>
+            </article>
+
+            <aside class="panel tool-panel">
+              <div class="panel-heading">
+                <h3>改稿工具</h3>
+                <p>把 prompt 变成助理能操作的按钮。</p>
+              </div>
+              <button class="tool-button" data-action="tighten" type="button">压缩冗余表达</button>
+              <button class="tool-button" data-action="legal" type="button">增强法律严谨性</button>
+              <button class="tool-button" data-action="wechat" type="button">增强公众号吸引力</button>
+              <button class="tool-button" data-action="risk" type="button">加入实务风险感</button>
+              <button class="tool-button" data-action="antiAi" type="button">去 AI 味处理</button>
+              <button class="tool-button" data-action="sanguo" type="button">生成三国风小标题</button>
+              <button class="tool-button" data-action="poem" type="button">添加诗词结尾</button>
+              <label class="custom-rewrite-field">
+                自定义调整
+                <textarea id="customRewrite" placeholder="例如：把开头写得更像温勇公众号，但第二部分更简洁；加强墨西哥申请人的段落。"></textarea>
+              </label>
+              <button class="secondary-button full-width" id="customRewriteBtn" type="button">按要求微调草稿</button>
+              <button class="secondary-button full-width" id="reviewBtn" type="button">生成审阅清单</button>
+              <button class="primary-button full-width" id="socialBtn" type="button">生成小红书 / LinkedIn</button>
+            </aside>
+          </div>
+        </section>
+
+        <section class="section" id="review">
+          <div class="two-column">
+            <article class="panel">
+              <div class="panel-heading">
+                <h3>律师审阅清单</h3>
+                <p>只保留高层风险、发布判断和必须核验点。</p>
+              </div>
+              <div id="reviewOutput" class="review-output">
+                <p class="empty-state">点击“生成审阅清单”后，这里会显示简洁的律师高层审阅意见。</p>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-heading">
+                <h3>发布控制</h3>
+                <p>法律助理可提交，律师可批准。</p>
+              </div>
+              <div class="approval-box">
+                <p id="approvalText">当前稿件尚未完成律师审阅。</p>
+                <button class="primary-button" id="approveBtn" type="button">律师批准发布</button>
+              </div>
+              <div class="audit-log">
+                <h4>版本记录</h4>
+                <ul id="auditLog"></ul>
+              </div>
+            </article>
+
+            <article class="panel full-span">
+              <div class="panel-heading">
+                <h3>最终草稿</h3>
+                <p>供律师在审阅页直接查看，无需返回草稿编辑器。</p>
+              </div>
+              <textarea id="reviewDraftViewer" class="draft-editor review-draft-viewer" readonly></textarea>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="social">
+          <div class="two-column">
+            <article class="panel">
+              <div class="panel-heading">
+                <h3>小红书卡片版</h3>
+                <p>把公众号长文拆成 5-10 张适合做图片的卡片脚本。</p>
+              </div>
+              <div id="xhsOutput" class="card-output">
+                <p class="empty-state">点击“生成小红书 / LinkedIn”后，这里会显示小红书图片卡片内容。</p>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-heading">
+                <h3>LinkedIn 文章版</h3>
+                <p>保留专业判断，改成适合英文职场平台的表达节奏。</p>
+              </div>
+              <div id="linkedinOutput" class="linkedin-output">
+                <p class="empty-state">LinkedIn 版本会在这里生成。</p>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section" id="library">
+          <div class="two-column">
+            <article class="panel">
+              <div class="panel-heading">
+                <h3>项目与版本</h3>
+                <p>保存当前文章状态，或恢复之前的版本。</p>
+              </div>
+              <div class="button-row">
+                <button class="primary-button" id="librarySaveBtn" type="button">保存当前版本</button>
+                <button class="secondary-button" id="refreshProjectsBtn" type="button">刷新项目</button>
+              </div>
+              <div class="project-list" id="projectList">
+                <p class="empty-state">暂无已保存项目。</p>
+              </div>
+              <div class="version-list" id="versionList">
+                <p class="empty-state">选择项目后可查看版本。</p>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-heading">
+                <h3>知识库素材</h3>
+                <p>上传范文、律师笔记或政策摘要，生成时会作为参考材料。</p>
+              </div>
+              <label>
+                素材标题
+                <input id="knowledgeTitle" value="EB-5 律师笔记" />
+              </label>
+              <label>
+                粘贴素材
+                <textarea id="knowledgeContent" placeholder="粘贴公众号范文、律师 prompt、政策摘要或审阅规则。"></textarea>
+              </label>
+              <label>
+                上传文本文件
+                <input id="knowledgeFile" type="file" accept=".txt,.md,.csv,.json" />
+              </label>
+              <div class="button-row">
+                <button class="primary-button" id="saveKnowledgeBtn" type="button">保存素材</button>
+                <button class="secondary-button" id="injectKnowledgeBtn" type="button">注入到材料区</button>
+              </div>
+              <div class="knowledge-list" id="knowledgeList">
+                <p class="empty-state">暂无知识库素材。</p>
+              </div>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./app.js?v=beta2"></script>
+  </body>
+</html>
