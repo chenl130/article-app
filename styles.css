@@ -709,7 +709,7 @@ textarea {
 }
 
 .xhs-image-preview img {
-  width: min(100%, 320px);
+  width: min(100%, 360px);
   border: 1px solid var(--line);
   box-shadow: 0 16px 32px rgba(31, 42, 55, 0.14);
 }

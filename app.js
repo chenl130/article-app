@@ -195,6 +195,144 @@ function toAbsoluteUrl(url) {
   }
 }
 
+function escapeXml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function wrapText(text, maxChars, maxLines = 99) {
+  const normalized = String(text || "").replace(/\s+/g, " ").trim();
+  const lines = [];
+  let current = "";
+  for (const char of normalized) {
+    const width = /[A-Za-z0-9]/.test(char) ? 0.55 : 1;
+    const currentWidth = Array.from(current).reduce((sum, item) => sum + (/[A-Za-z0-9]/.test(item) ? 0.55 : 1), 0);
+    if (current && currentWidth + width > maxChars) {
+      lines.push(current);
+      current = char.trimStart();
+      if (lines.length >= maxLines) break;
+    } else {
+      current += char;
+    }
+  }
+  if (current && lines.length < maxLines) lines.push(current);
+  return lines;
+}
+
+function createSvgDownloadUrl(svg) {
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+function buildClearTextXhsSvg(card, index) {
+  const palette = [
+    { bg: "#f6f1e8", ink: "#1f2933", accent: "#7a5634", soft: "#efe2cc", tag: "#ffffff" },
+    { bg: "#eef4f1", ink: "#18212b", accent: "#1f6f5b", soft: "#d8e8e2", tag: "#ffffff" },
+    { bg: "#f3f5f8", ink: "#172033", accent: "#2d5d88", soft: "#dce7f1", tag: "#ffffff" },
+    { bg: "#fbf4f0", ink: "#241d1b", accent: "#9f4b38", soft: "#f0d6cc", tag: "#ffffff" },
+  ][index % 4];
+  const titleLines = wrapText(card.title || "核心判断", 9, 3);
+  const bodyLines = wrapText(card.body || "", 17, 8);
+  const footerLines = wrapText(card.footer || "一般信息分享，不构成个案法律意见。", 22, 2);
+  const visualTag = String(card.visual_direction || "NIW 系列").slice(0, 18);
+  const chips = ["NIW", "证据工程", "律师审阅"].slice(0, 3);
+  const bodyStart = 390 + Math.max(0, titleLines.length - 2) * 42;
+
+  const textLines = (lines, x, y, size, lineHeight, weight = 500, fill = palette.ink) =>
+    lines
+      .map((line, lineIndex) => `<text x="${x}" y="${y + lineIndex * lineHeight}" font-size="${size}" font-weight="${weight}" fill="${fill}">${escapeXml(line)}</text>`)
+      .join("");
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1365" viewBox="0 0 1024 1365">
+  <rect width="1024" height="1365" fill="${palette.bg}"/>
+  <rect x="58" y="58" width="908" height="1249" rx="36" fill="rgba(255,255,255,0.48)" stroke="${palette.soft}" stroke-width="2"/>
+  <rect x="92" y="92" width="840" height="8" rx="4" fill="${palette.accent}"/>
+  <text x="92" y="180" font-size="78" font-weight="800" fill="${palette.accent}">${String(index + 1).padStart(2, "0")}</text>
+  <line x1="244" y1="120" x2="244" y2="258" stroke="${palette.accent}" stroke-width="3"/>
+  ${textLines(titleLines, 292, 168, 58, 76, 850)}
+  <rect x="92" y="${bodyStart - 72}" width="840" height="${Math.max(360, bodyLines.length * 58 + 72)}" rx="28" fill="${palette.tag}" opacity="0.76"/>
+  ${textLines(bodyLines, 128, bodyStart, 38, 58, 600)}
+  <g transform="translate(92, ${bodyStart + Math.max(360, bodyLines.length * 58 + 72) + 54})">
+    <rect x="0" y="0" width="840" height="132" rx="26" fill="${palette.soft}"/>
+    <text x="34" y="52" font-size="24" font-weight="800" fill="${palette.accent}">视觉主题</text>
+    <text x="34" y="96" font-size="32" font-weight="750" fill="${palette.ink}">${escapeXml(visualTag)}</text>
+    ${chips.map((chip, chipIndex) => `
+      <rect x="${500 + chipIndex * 104}" y="36" width="84" height="54" rx="18" fill="${palette.tag}" opacity="0.9"/>
+      <text x="${542 + chipIndex * 104}" y="71" text-anchor="middle" font-size="20" font-weight="800" fill="${palette.accent}">${escapeXml(chip)}</text>
+    `).join("")}
+  </g>
+  <g transform="translate(92, 1174)">
+    <line x1="0" y1="0" x2="840" y2="0" stroke="${palette.soft}" stroke-width="3"/>
+    ${textLines(footerLines, 0, 62, 28, 42, 550, "#687382")}
+  </g>
+  <text x="92" y="1268" font-size="22" font-weight="700" fill="#8b949e">Attorney-reviewed content draft · For general information only</text>
+</svg>`;
+}
+
+function generateClearTextCard(index, button) {
+  if (!state.currentSocial || !Array.isArray(state.currentSocial.xhs_cards)) {
+    showToast("请先生成小红书卡片脚本");
+    return;
+  }
+  const card = state.currentSocial.xhs_cards[index];
+  if (!card) {
+    showToast("找不到这张卡片");
+    return;
+  }
+  const restore = setBusy(button, "生成中...");
+  try {
+    const svg = buildClearTextXhsSvg(card, index);
+    const svgUrl = createSvgDownloadUrl(svg);
+    card.clear_svg = svg;
+    card.clear_svg_url = svgUrl;
+    renderSocial(state.currentSocial);
+    const preview = $(`[data-xhs-image-preview="${index}"]`);
+    preview?.scrollIntoView({ behavior: "smooth", block: "center" });
+    addLog(`生成清晰文字卡片：CARD ${index + 1}`);
+    showToast(`CARD ${index + 1} 清晰文字卡片已生成`);
+  } finally {
+    restore();
+  }
+}
+
+async function downloadClearTextPng(index) {
+  const card = state.currentSocial?.xhs_cards?.[index];
+  const svg = card?.clear_svg || buildClearTextXhsSvg(card || {}, index);
+  const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const image = new Image();
+  image.decoding = "async";
+  image.onload = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1024;
+    canvas.height = 1365;
+    const context = canvas.getContext("2d");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0);
+    URL.revokeObjectURL(url);
+    canvas.toBlob((pngBlob) => {
+      if (!pngBlob) {
+        showToast("PNG 导出失败，可先下载 SVG");
+        return;
+      }
+      const pngUrl = URL.createObjectURL(pngBlob);
+      const link = document.createElement("a");
+      link.href = pngUrl;
+      link.download = `xhs-card-${String(index + 1).padStart(2, "0")}.png`;
+      link.click();
+      URL.revokeObjectURL(pngUrl);
+    }, "image/png");
+  };
+  image.onerror = () => {
+    URL.revokeObjectURL(url);
+    showToast("PNG 导出失败，可先下载 SVG");
+  };
+  image.src = url;
+}
+
 function switchSection(id) {
   $$(".section").forEach((section) => section.classList.toggle("active", section.id === id));
   $$(".nav-item").forEach((item) => item.classList.toggle("active", item.dataset.section === id));
@@ -339,12 +477,15 @@ function renderSocial(result) {
             <textarea data-xhs-prompt-index="${index}" spellcheck="false">${escapeHtml(card.image_prompt || buildXhsImagePrompt(card, index, result))}</textarea>
           </label>
           <div class="inline-actions">
+            <button class="mini-button" data-xhs-clear-generate="${index}" type="button">生成清晰文字卡片</button>
             <button class="mini-button" data-xhs-image-generate="${index}" type="button">生成这张图片</button>
             ${card.image_url ? `<a class="mini-button" href="${escapeHtml(toAbsoluteUrl(card.image_url))}" target="_blank" rel="noreferrer">打开图片</a>` : ""}
+            ${card.clear_svg_url ? `<a class="mini-button" href="${card.clear_svg_url}" download="xhs-card-${index + 1}.svg">下载SVG</a><button class="mini-button" data-xhs-clear-png="${index}" type="button">下载PNG</button>` : ""}
           </div>
+          ${card.clear_svg_url ? `<div class="xhs-image-status">清晰文字卡片已生成：中文由浏览器真实字体渲染，不会出现 AI 乱码。</div>` : ""}
           ${card.image_url ? `<div class="xhs-image-status">图片已生成：<a href="${escapeHtml(toAbsoluteUrl(card.image_url))}" target="_blank" rel="noreferrer">${escapeHtml(toAbsoluteUrl(card.image_url))}</a></div>` : ""}
           <div class="xhs-image-preview" data-xhs-image-preview="${index}">
-            ${card.image_url ? `<img src="${escapeHtml(toAbsoluteUrl(card.image_url))}" alt="小红书卡片 ${index + 1}" />` : ""}
+            ${card.clear_svg_url ? `<img src="${card.clear_svg_url}" alt="清晰文字小红书卡片 ${index + 1}" />` : card.image_url ? `<img src="${escapeHtml(toAbsoluteUrl(card.image_url))}" alt="小红书卡片 ${index + 1}" />` : ""}
           </div>
         </div>
       `).join("")}
@@ -1150,8 +1291,17 @@ function bindEvents() {
   });
   $("#xhsOutput").addEventListener("click", (event) => {
     const button = event.target.closest?.("[data-xhs-image-generate]");
-    if (!button) return;
-    generateXhsImage(Number(button.dataset.xhsImageGenerate), button);
+    const clearButton = event.target.closest?.("[data-xhs-clear-generate]");
+    const pngButton = event.target.closest?.("[data-xhs-clear-png]");
+    if (button) {
+      generateXhsImage(Number(button.dataset.xhsImageGenerate), button);
+    }
+    if (clearButton) {
+      generateClearTextCard(Number(clearButton.dataset.xhsClearGenerate), clearButton);
+    }
+    if (pngButton) {
+      downloadClearTextPng(Number(pngButton.dataset.xhsClearPng));
+    }
   });
   $("#customRewriteBtn").addEventListener("click", applyCustomRewrite);
   $("#approveBtn").addEventListener("click", approveArticle);
