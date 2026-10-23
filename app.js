@@ -45,12 +45,41 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+const CUSTOM_OPTION_VALUE = "__other__";
+
+function getSelectOrCustom(selectId, inputId) {
+  const select = $(`#${selectId}`);
+  const customInput = $(`#${inputId}`);
+  return select.value === CUSTOM_OPTION_VALUE
+    ? customInput.value.trim() || "其他"
+    : select.value;
+}
+
+function syncCustomInput(selectId, inputId) {
+  const select = $(`#${selectId}`);
+  const customInput = $(`#${inputId}`);
+  customInput.hidden = select.value !== CUSTOM_OPTION_VALUE;
+  if (!customInput.hidden) customInput.focus();
+}
+
+function setSelectOrCustom(selectId, inputId, value, fallback) {
+  const select = $(`#${selectId}`);
+  const customInput = $(`#${inputId}`);
+  const resolved = value || fallback;
+  const hasOption = Array.from(select.options).some(
+    (option) => option.value === resolved && option.value !== CUSTOM_OPTION_VALUE,
+  );
+  select.value = hasOption ? resolved : CUSTOM_OPTION_VALUE;
+  customInput.value = hasOption ? "" : resolved;
+  customInput.hidden = hasOption;
+}
+
 function getFormData() {
   const depth = document.querySelector("input[name='depth']:checked").value;
   return {
     topic: $("#topic").value.trim() || "未命名文章",
-    category: $("#category").value,
-    audience: $("#audience").value,
+    category: getSelectOrCustom("category", "categoryOther"),
+    audience: getSelectOrCustom("audience", "audienceOther"),
     channel: $("#channel").value,
     styleProfile: $("#styleProfile").value,
     articleType: $("#articleType").value,
@@ -83,8 +112,8 @@ function getFinalImportData() {
     title,
     form: {
       topic: title,
-      category: $("#finalCategory").value,
-      audience: $("#finalAudience").value,
+      category: getSelectOrCustom("finalCategory", "finalCategoryOther"),
+      audience: getSelectOrCustom("finalAudience", "finalAudienceOther"),
       channel: "微信公众号",
       styleProfile: $("#finalStyleProfile").value,
       articleType: "定稿多平台改写",
@@ -401,8 +430,8 @@ function restoreProjectSnapshot(snapshot) {
   if (!snapshot || typeof snapshot !== "object") return;
   const form = snapshot.form || {};
   $("#topic").value = form.topic || "";
-  $("#category").value = form.category || "EB-5";
-  $("#audience").value = form.audience || "留学生与专业人士";
+  setSelectOrCustom("category", "categoryOther", form.category, "EB-5");
+  setSelectOrCustom("audience", "audienceOther", form.audience, "留学生与专业人士");
   $("#channel").value = form.channel || "微信公众号";
   $("#styleProfile").value = form.styleProfile || "温勇公众号深度评论风格";
   $("#articleType").value = form.articleType || "政策风险深度拆解";
@@ -836,8 +865,8 @@ function loadAttorneyFinal(options = {}) {
   }
 
   $("#topic").value = data.title;
-  $("#category").value = data.form.category;
-  $("#audience").value = data.form.audience;
+  setSelectOrCustom("category", "categoryOther", data.form.category, "EB-5");
+  setSelectOrCustom("audience", "audienceOther", data.form.audience, "留学生与专业人士");
   $("#channel").value = data.form.channel;
   $("#styleProfile").value = data.form.styleProfile;
   $("#articleType").value = "定稿多平台改写";
@@ -1343,7 +1372,18 @@ function bindEvents() {
     });
   });
   $$("input[name='depth']").forEach((input) => input.addEventListener("change", updateMetrics));
-  $("#category").addEventListener("change", updateMetrics);
+  [
+    ["category", "categoryOther"],
+    ["audience", "audienceOther"],
+    ["finalCategory", "finalCategoryOther"],
+    ["finalAudience", "finalAudienceOther"],
+  ].forEach(([selectId, inputId]) => {
+    $(`#${selectId}`).addEventListener("change", () => {
+      syncCustomInput(selectId, inputId);
+      if (selectId === "category") updateMetrics();
+    });
+  });
+  $("#categoryOther").addEventListener("input", updateMetrics);
   $("#riskFirst").addEventListener("change", updateMetrics);
 }
 
